@@ -15,10 +15,13 @@ type GameState = {
   direction: Direction;
   nextDirection: Direction;
   score: number;
+  lives: number;
+  remainingDots: number;
+  hasWon: boolean;
 };
 
-const TILE_SIZE = 24; // taille d'une case en px
-const STEP_MS = 120;  // vitesse : 1 case tous les 120 ms
+const TILE_SIZE = 24;
+const STEP_MS = 120;
 
 const directionFromKey: Record<string, Direction> = {
   ArrowUp: "up",
@@ -27,78 +30,95 @@ const directionFromKey: Record<string, Direction> = {
   ArrowRight: "right",
 };
 
+const createInitialGrid = (): string[] =>
+  LEVEL_1.map((row) => row.replace("P", " "));
+
+const findInitialPacman = (): Position => {
+  for (let y = 0; y < LEVEL_1.length; y++) {
+    const row = LEVEL_1[y];
+    const x = row.indexOf("P");
+    if (x !== -1) return { x, y };
+  }
+  return { x: 1, y: 1 };
+};
+
+const countDots = (grid: string[]): number =>
+  grid.reduce(
+    (acc, row) => acc + row.split("").filter((c) => c === ".").length,
+    0
+  );
+
+const initialGrid = createInitialGrid();
+
+const initialState: GameState = {
+  grid: initialGrid,
+  pacman: findInitialPacman(),
+  direction: null,
+  nextDirection: null,
+  score: 0,
+  lives: 3,
+  remainingDots: countDots(initialGrid),
+  hasWon: false,
+};
+
 export default function GameScreen({ onBackToMenu }: GameScreenProps) {
-  // Niveau texte -> grille modifiable (on enlève le P)
-  const createInitialGrid = (): string[] =>
-    LEVEL_1.map((row) => row.replace("P", " "));
+  const [state, setState] = useState<GameState>(initialState);
 
-  const findInitialPacman = (): Position => {
-    for (let y = 0; y < LEVEL_1.length; y++) {
-      const row = LEVEL_1[y];
-      const x = row.indexOf("P");
-      if (x !== -1) return { x, y };
-    }
-    return { x: 1, y: 1 };
-  };
-
-  const [state, setState] = useState<GameState>(() => ({
-    grid: createInitialGrid(),
-    pacman: findInitialPacman(),
-    direction: null,
-    nextDirection: null,
-    score: 0,
-  }));
-
-  // Gestion du clavier : on ne déplace PLUS Pacman ici,
-  // on met juste à jour la direction / nextDirection.
+  // ---------- CLAVIER ----------
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const dir = directionFromKey[e.key];
       if (!dir) return;
-  
+
       e.preventDefault();
-  
+
       setState((prev) => {
-        // Pacman à l'arrêt → il part tout de suite dans cette direction
         if (prev.direction === null) {
           return { ...prev, direction: dir, nextDirection: dir };
         }
-        // Sinon : on mémorise cette direction comme prochaine direction
         return { ...prev, nextDirection: dir };
       });
     };
-  
+
     const handleKeyUp = (e: KeyboardEvent) => {
       const dir = directionFromKey[e.key];
       if (!dir) return;
-  
+
       setState((prev) => {
-        // ❗ On n'arrête Pacman QUE si on relâche la flèche
-        // qui correspond à la direction ACTUELLE ET à la direction "next"
         if (prev.direction === dir && prev.nextDirection === dir) {
           return { ...prev, direction: null, nextDirection: null };
         }
-        // Sinon, on ne touche à rien (par ex : on relâche l'ancienne direction)
         return prev;
       });
     };
-  
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-  
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
-  
-  
 
-  // Boucle de jeu : avance Pacman d'une case à vitesse constante
+  // ---------- BOUCLE DE JEU ----------
   useEffect(() => {
     const interval = window.setInterval(() => {
       setState((prev) => {
-        const { grid, pacman, direction, nextDirection, score } = prev;
+        const {
+          grid,
+          pacman,
+          direction,
+          nextDirection,
+          score,
+          lives,
+          remainingDots,
+          hasWon,
+        } = prev;
+
+        if (hasWon) {
+          return prev;
+        }
 
         const canMoveTo = (x: number, y: number): boolean => {
           if (y < 0 || y >= grid.length) return false;
@@ -110,7 +130,8 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
           dir: Direction,
           pos: Position,
           gridIn: string[],
-          scoreIn: number
+          scoreIn: number,
+          dotsIn: number
         ) => {
           if (!dir) {
             return {
@@ -118,6 +139,7 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
               pos,
               grid: gridIn,
               score: scoreIn,
+              dots: dotsIn,
             };
           }
 
@@ -137,15 +159,19 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
               pos,
               grid: gridIn,
               score: scoreIn,
+              dots: dotsIn,
             };
           }
 
           let newGrid = gridIn;
           let newScore = scoreIn;
+          let newDots = dotsIn;
 
           const cell = gridIn[ny][nx];
           if (cell === ".") {
             newScore += 10;
+            newDots -= 1;
+
             const row = gridIn[ny];
             const newRow = row.substring(0, nx) + " " + row.substring(nx + 1);
             newGrid = [...gridIn];
@@ -157,6 +183,7 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
             pos: { x: nx, y: ny },
             grid: newGrid,
             score: newScore,
+            dots: newDots,
           };
         };
 
@@ -165,35 +192,39 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
         let newPos = pacman;
         let newGrid = grid;
         let newScore = score;
+        let newDots = remainingDots;
 
-        // 1. Priorité à la prochaine direction demandée (pour bien prendre les virages)
+        // 1) priorité à la nextDirection
         if (nextDirection) {
-          const res = moveOnce(nextDirection, newPos, newGrid, newScore);
+          const res = moveOnce(
+            nextDirection,
+            newPos,
+            newGrid,
+            newScore,
+            newDots
+          );
           if (res.moved) {
             newDir = nextDirection;
             newPos = res.pos;
             newGrid = res.grid;
             newScore = res.score;
-
-            return {
-              grid: newGrid,
-              pacman: newPos,
-              direction: newDir,
-              nextDirection: newNext,
-              score: newScore,
-            };
+            newDots = res.dots;
           }
         }
 
-        // 2. Sinon, on continue dans la direction actuelle
-        if (direction) {
-          const res = moveOnce(direction, newPos, newGrid, newScore);
+        // 2) sinon on continue dans la direction actuelle
+        if (!hasWon && !nextDirection && direction) {
+          const res = moveOnce(direction, newPos, newGrid, newScore, newDots);
           if (res.moved) {
             newPos = res.pos;
             newGrid = res.grid;
             newScore = res.score;
+            newDots = res.dots;
           }
         }
+
+        // calcul du nouvel état de victoire
+        const won = hasWon || newDots <= 0;
 
         return {
           grid: newGrid,
@@ -201,6 +232,9 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
           direction: newDir,
           nextDirection: newNext,
           score: newScore,
+          lives,
+          remainingDots: newDots,
+          hasWon: won,
         };
       });
     }, STEP_MS);
@@ -208,7 +242,20 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
     return () => window.clearInterval(interval);
   }, []);
 
-  const { grid, pacman, score } = state;
+  const { grid, pacman, score, lives, hasWon } = state;
+
+  const handleNextLevel = () => {
+    const newGrid = createInitialGrid();
+    setState((prev) => ({
+      ...prev,
+      grid: newGrid,
+      pacman: findInitialPacman(),
+      direction: null,
+      nextDirection: null,
+      remainingDots: countDots(newGrid),
+      hasWon: false,
+    }));
+  };
 
   return (
     <div className="screen center">
@@ -216,6 +263,7 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
 
       <div className="game-hud">
         <span>SCORE : {score}</span>
+        <span className="game-lives">VIES : {"❤".repeat(lives)}</span>
       </div>
 
       <div
@@ -256,6 +304,17 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
             }px)`,
           }}
         />
+
+        {hasWon && (
+          <div className="overlay">
+            <div className="overlay-box">
+              <h2>YOU WIN!</h2>
+              <p>Niveau complété</p>
+              <button onClick={handleNextLevel}>Next level</button>
+              <button onClick={onBackToMenu}>Retour au menu</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <button onClick={onBackToMenu}>Retour au menu</button>

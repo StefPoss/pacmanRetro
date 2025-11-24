@@ -10,6 +10,16 @@ export default function ReleaseNotesScreen({ onBack }: ReleaseNotesScreenProps) 
       <h1>{APP_NAME} – Release notes</h1>
       <p>Version actuelle : {APP_VERSION}</p>
 
+      <section style={{ maxWidth: 700, textAlign: "left", marginTop: "2rem" }}>
+      <h2>v0.6.0 – Boucle de jeu niveau 1</h2>
+      <ul>
+        <li>Ajout d'un système de <strong>vies</strong> (affichage des ❤, 3 au départ)</li>
+        <li>Comptage des pastilles restantes sur le niveau</li>
+        <li>Détection de la victoire quand toutes les pastilles sont mangées</li>
+        <li>Overlay "YOU WIN!" avec boutons <em>Next level</em> et retour au menu</li>
+        <li>Reset propre du niveau quand on clique sur <em>Next level</em></li>
+      </ul>
+
       <h2>v0.5.0 – Gameplay : déplacement fluide + pastilles + score</h2>
         <ul>
           <li>Ajout du moteur de déplacement <strong>case par case</strong></li>

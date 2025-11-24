@@ -163,6 +163,41 @@
     font-family: 'Press Start 2P', monospace;
     font-size: 0.8rem;
     text-transform: uppercase;
+    display: flex;
+    gap: 2rem;
+  }
+
+  .game-lives {
+    color: #ff7777;
+  }
+
+/* Overlay victoire */
+.overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .overlay-box {
+    background: #111;
+    border: 2px solid #ffdd33;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    box-shadow: 0 0 12px #ffdd33;
+  }
+  
+  .overlay-box h2 {
+    font-family: 'Press Start 2P', monospace;
+    margin-bottom: 1rem;
+  }
+  
+  .overlay-box button {
+    margin-top: 0.5rem;
+    display: block;
+    width: 100%;
   }
   
 /* Zone de jeu (grille) */
