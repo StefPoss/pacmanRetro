@@ -159,12 +159,17 @@
   }
 
   .game-hud {
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
     font-family: 'Press Start 2P', monospace;
     font-size: 0.8rem;
     text-transform: uppercase;
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
+  }
+
+  .game-mode {
+    font-size: 0.9rem;
+    opacity: 0.8;
   }
 
   .game-lives {
@@ -281,6 +286,22 @@
     z-index: 2;
   }  
 
+  .ghost-frightened {
+    filter: brightness(1.2);
+  }
+  
+  .blinking {
+    animation: blink 0.25s alternate infinite;
+  }
+
+  .tile.super-dot {
+    position: absolute;
+    border-radius: 50%;
+    background: #4bffff;
+    box-shadow:
+      0 0 4px #4bffff,
+      0 0 10px #4bffff;
+  }
 
   .game-screen .game-area-placeholder {
     width: min(80vw, 640px);
@@ -297,7 +318,56 @@
     letter-spacing: 0.08em;
   }
   
+/* ===========================
+   Écran Release Notes
+   =========================== */
+
+   .release-notes-screen {
+    align-items: flex-start;      /* collé en haut, pas centré verticalement */
+    justify-content: center;      /* centré horizontalement */
+    padding: 3rem 2rem;
+    overflow-y: auto;             /* scroll si le changelog est long */
+  }
   
+  .release-notes {
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    background: #050505;
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.7);
+    text-align: left;
+    line-height: 1.6;
+    font-size: 0.95rem;
+  }
+  
+  /* Titres des versions */
+  .release-notes h2 {
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .release-notes h2:first-of-type {
+    margin-top: 1.5rem;
+  }
+  
+  /* Listes */
+  .release-notes ul {
+    margin: 0 0 1rem 1.2rem;
+    padding: 0;
+  }
+  
+  .release-notes li {
+    margin-bottom: 0.25rem;
+  }
+  
+  /* Bouton de retour */
+  .release-notes button {
+    margin-top: 2rem;
+  }
+    
+
   
   @keyframes blink {
     0%, 100% { opacity: 0.25; }
