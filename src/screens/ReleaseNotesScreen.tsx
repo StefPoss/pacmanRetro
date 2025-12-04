@@ -14,6 +14,19 @@ export default function ReleaseNotesScreen({ onBack }: ReleaseNotesScreenProps) 
         </h1>
         <p>Version actuelle : {APP_VERSION}</p>
 
+        <h2>v0.8.4 – Touch & Sound update</h2>
+          <ul>
+            <li>
+              <strong>Contrôles mobiles</strong> améliorés : seuil de swipe réduit et ajout d&apos;un mini pad directionnel pour jouer confortablement sur smartphone.
+            </li>
+            <li>
+              <strong>Bouton Son</strong> dans le HUD permettant de couper / réactiver instantanément musiques et effets.
+            </li>
+            <li>
+              <strong>Palette des fantômes</strong> revue pour éviter toute confusion avec le mode frightened (bleu seulement quand ils sont vulnérables).
+            </li>
+          </ul>
+
         <h2>v0.8.3 – Release Notes Ghostify</h2>
           <ul>
             <li>
