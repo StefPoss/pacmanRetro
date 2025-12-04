@@ -303,6 +303,9 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const touchInfoRef = useRef<TouchInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [tileSizePx, setTileSizePx] = useState(TILE_SIZE);
+  const gridCols = state.grid[0]?.length ?? 0;
+  const gridRows = state.grid.length;
 
   const applyDirectionalInput = (dir: Direction) => {
     setState((prev) => {
@@ -409,6 +412,38 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
   const handleToggleMute = () => {
     setIsMuted((prev) => !prev);
   };
+
+  useEffect(() => {
+    if (!gridCols || !gridRows) return;
+
+    const computeTileSize = () => {
+      const horizontalMargin = window.innerWidth <= 480 ? 16 : 32;
+      const controlsAllowance = window.innerWidth <= 768 ? 320 : 240;
+      const availableWidth = Math.max(180, window.innerWidth - horizontalMargin);
+      const availableHeight = Math.max(
+        220,
+        window.innerHeight - controlsAllowance
+      );
+      const next = Math.max(
+        12,
+        Math.min(
+          TILE_SIZE,
+          Math.floor(
+            Math.min(availableWidth / gridCols, availableHeight / gridRows)
+          )
+        )
+      );
+      setTileSizePx(next);
+    };
+
+    computeTileSize();
+    window.addEventListener("resize", computeTileSize);
+    window.addEventListener("orientationchange", computeTileSize);
+    return () => {
+      window.removeEventListener("resize", computeTileSize);
+      window.removeEventListener("orientationchange", computeTileSize);
+    };
+  }, [gridCols, gridRows]);
 
   // =======================
   // Musique de fond par niveau
@@ -712,6 +747,9 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
     frightTimerMs,
   } = state;
 
+  const gridPixelWidth = gridCols * tileSizePx;
+  const gridPixelHeight = gridRows * tileSizePx;
+
   const isFrightEnding =
     isFrightened && frightTimerMs <= FRIGHT_WARNING_MS;
 
@@ -778,8 +816,8 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         style={{
-          width: grid[0].length * TILE_SIZE,
-          height: grid.length * TILE_SIZE,
+          width: gridPixelWidth,
+          height: gridPixelHeight,
         }}
       >
         {grid.map((row, y) =>
@@ -794,10 +832,10 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
                 key={`${x}-${y}`}
                 className={className}
                 style={{
-                  width: TILE_SIZE,
-                  height: TILE_SIZE,
-                  left: x * TILE_SIZE,
-                  top: y * TILE_SIZE,
+                  width: tileSizePx,
+                  height: tileSizePx,
+                  left: x * tileSizePx,
+                  top: y * tileSizePx,
                 }}
               />
             );
@@ -808,10 +846,10 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
         <div
           className="pacman"
           style={{
-            width: TILE_SIZE,
-            height: TILE_SIZE,
-            transform: `translate(${pacman.x * TILE_SIZE}px, ${
-              pacman.y * TILE_SIZE
+            width: tileSizePx,
+            height: tileSizePx,
+            transform: `translate(${pacman.x * tileSizePx}px, ${
+              pacman.y * tileSizePx
             }px)`,
           }}
         />
@@ -829,10 +867,10 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
                 : "")
             }
             style={{
-              width: TILE_SIZE,
-              height: TILE_SIZE,
-              transform: `translate(${g.position.x * TILE_SIZE}px, ${
-                g.position.y * TILE_SIZE
+              width: tileSizePx,
+              height: tileSizePx,
+              transform: `translate(${g.position.x * tileSizePx}px, ${
+                g.position.y * tileSizePx
               }px)`,
               backgroundColor: isFrightened ? "#4bffff" : g.color,
             }}
