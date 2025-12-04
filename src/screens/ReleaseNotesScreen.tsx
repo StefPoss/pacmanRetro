@@ -14,6 +14,11 @@ export default function ReleaseNotesScreen({ onBack }: ReleaseNotesScreenProps) 
         </h1>
         <p>Version actuelle : {APP_VERSION}</p>
 
+        <h2>v0.8.5 – Splash credit refresh</h2>
+          <ul>
+            <li>Message d’accueil mis à jour : “vibe coded by Lepacamaneur”.</li>
+          </ul>
+
         <h2>v0.8.4 – Touch & Sound update</h2>
           <ul>
             <li>
