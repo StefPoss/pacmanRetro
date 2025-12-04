@@ -34,6 +34,7 @@
     max-width: 960px;
     margin: 0 auto;
     min-height: 100vh;
+    overflow: hidden;
   }
   
   /* Splash screen */
@@ -152,6 +153,13 @@
     margin-bottom: 1.5rem;
     text-align: center;
   }
+
+  .game-top {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
   
   /* Zone de jeu */
   .game-area {
@@ -230,6 +238,9 @@
 
   .touch-controls {
     display: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   @media (max-width: 768px) {
@@ -269,6 +280,9 @@
       height: 64px;
       touch-action: manipulation;
       margin: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .touch-controls .touch-placeholder {

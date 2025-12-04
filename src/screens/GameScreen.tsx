@@ -1,6 +1,7 @@
 // src/screens/GameScreen.tsx
 import {
   useEffect,
+  useLayoutEffect,
   useState,
   useRef,
   type TouchEvent as ReactTouchEvent,
@@ -304,6 +305,8 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
   const touchInfoRef = useRef<TouchInfo | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [tileSizePx, setTileSizePx] = useState(TILE_SIZE);
+  const topSectionRef = useRef<HTMLDivElement | null>(null);
+  const controlsRef = useRef<HTMLDivElement | null>(null);
   const gridCols = state.grid[0]?.length ?? 0;
   const gridRows = state.grid.length;
 
@@ -413,17 +416,22 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
     setIsMuted((prev) => !prev);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!gridCols || !gridRows) return;
 
     const computeTileSize = () => {
-      const horizontalMargin = window.innerWidth <= 480 ? 16 : 32;
-      const controlsAllowance = window.innerWidth <= 768 ? 320 : 240;
-      const availableWidth = Math.max(180, window.innerWidth - horizontalMargin);
+      const docWidth = document.documentElement.clientWidth;
+      const isNarrow = window.innerWidth <= 480;
+      const lateralPadding = isNarrow ? 12 : 48;
+      const spacing = window.innerWidth <= 768 ? 40 : 72;
+      const topHeight = topSectionRef.current?.offsetHeight ?? 0;
+      const controlsHeight = controlsRef.current?.offsetHeight ?? 0;
+      const availableWidth = Math.max(160, docWidth - lateralPadding);
       const availableHeight = Math.max(
-        220,
-        window.innerHeight - controlsAllowance
+        160,
+        window.innerHeight - (topHeight + controlsHeight + spacing)
       );
+
       const next = Math.max(
         12,
         Math.min(
@@ -436,12 +444,22 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
       setTileSizePx(next);
     };
 
+    const handleResize = () => computeTileSize();
     computeTileSize();
-    window.addEventListener("resize", computeTileSize);
-    window.addEventListener("orientationchange", computeTileSize);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => computeTileSize());
+      if (topSectionRef.current) resizeObserver.observe(topSectionRef.current);
+      if (controlsRef.current) resizeObserver.observe(controlsRef.current);
+    }
+
     return () => {
-      window.removeEventListener("resize", computeTileSize);
-      window.removeEventListener("orientationchange", computeTileSize);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+      resizeObserver?.disconnect();
     };
   }, [gridCols, gridRows]);
 
@@ -786,27 +804,29 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
 
   return (
     <div className="screen center">
-      <h1 className="game-title">
-        PACMAN RETRO – Level {levelIndex + 1}/{LEVELS.length}
-      </h1>
+      <div className="game-top" ref={topSectionRef}>
+        <h1 className="game-title">
+          PACMAN RETRO – Level {levelIndex + 1}/{LEVELS.length}
+        </h1>
 
-      <div className="game-hud">
-        <span>SCORE : {score}</span>
-        <span className="game-lives">VIES : {"❤".repeat(lives)}</span>
-        {isFrightened && (
-          <span className="game-mode">
-            POWER MODE{" "}
-            {isFrightEnding ? "(!" : ""} {Math.ceil(frightTimerMs / 1000)}s
-            {isFrightEnding ? "!)" : ""}
-          </span>
-        )}
-        <button
-          type="button"
-          className="sound-toggle"
-          onClick={handleToggleMute}
-        >
-          {isMuted ? "SON COUPÉ" : "SON ON"}
-        </button>
+        <div className="game-hud">
+          <span>SCORE : {score}</span>
+          <span className="game-lives">VIES : {"❤".repeat(lives)}</span>
+          {isFrightened && (
+            <span className="game-mode">
+              POWER MODE{" "}
+              {isFrightEnding ? "(!" : ""} {Math.ceil(frightTimerMs / 1000)}s
+              {isFrightEnding ? "!)" : ""}
+            </span>
+          )}
+          <button
+            type="button"
+            className="sound-toggle"
+            onClick={handleToggleMute}
+          >
+            {isMuted ? "SON COUPÉ" : "SON ON"}
+          </button>
+        </div>
       </div>
 
       <div
@@ -902,7 +922,12 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
         )}
       </div>
 
-      <div className="touch-controls" aria-label="Contrôles tactiles">
+      <div
+        className="touch-controls"
+        aria-label="Contrôles tactiles"
+        ref={controlsRef}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="touch-placeholder" />
         <button
           type="button"
