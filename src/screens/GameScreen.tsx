@@ -1,5 +1,10 @@
 // src/screens/GameScreen.tsx
-import { useEffect, useState, useRef } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import { LEVELS } from "../levels";
 
 type GameScreenProps = {
@@ -34,10 +39,18 @@ type GameState = {
   frightTimerMs: number;
 };
 
+type TouchInfo = {
+  id: number;
+  startX: number;
+  startY: number;
+  lastDirection: Direction;
+};
+
 const TILE_SIZE = 24;
 const STEP_MS = 120;
 const GHOST_STEP_NORMAL = 3;
 const GHOST_STEP_FRIGHTENED = 4;
+const SWIPE_THRESHOLD_PX = 10;
 
 const FRIGHT_DURATION_MS = 12000; // 12s de power
 const FRIGHT_WARNING_MS = 3000;   // dernières secondes clignotantes
@@ -53,7 +66,13 @@ const directionFromKey: Record<string, Direction> = {
 const MUSIC_BY_LEVEL = ["level1", "level2", "level3", "level4", "level5"];
 
 // --------- helpers son ---------
+let soundMuted = false;
+const setSoundMuted = (value: boolean) => {
+  soundMuted = value;
+};
+
 const playSound = (name: string) => {
+  if (soundMuted) return;
   try {
     const base = import.meta.env.BASE_URL || "/";
     const audio = new Audio(`${base}sounds/${name}.wav`);
@@ -89,7 +108,7 @@ const countDots = (grid: string[]): number =>
     0
   );
 
-const GHOST_COLORS = ["#ff4b4b", "#ff9ad5", "#4bffff", "#ffb84b"];
+const GHOST_COLORS = ["#ff4b4b", "#ff8bd8", "#ffb84b", "#4bff7a"];
 const GHOST_IDS = ["blinky", "pinky", "inky", "clyde"];
 
 const createInitialGhosts = (levelIndex: number): Ghost[] => {
@@ -282,6 +301,114 @@ const movePacmanOnce = (
 export default function GameScreen({ onBackToMenu }: GameScreenProps) {
   const [state, setState] = useState<GameState>(() => makeInitialState(0));
   const musicRef = useRef<HTMLAudioElement | null>(null);
+  const touchInfoRef = useRef<TouchInfo | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const applyDirectionalInput = (dir: Direction) => {
+    setState((prev) => {
+      if (prev.direction === null) {
+        return { ...prev, direction: dir, nextDirection: dir };
+      }
+      if (prev.nextDirection === dir) {
+        return prev;
+      }
+      return { ...prev, nextDirection: dir };
+    });
+  };
+
+  const releaseDirectionalInput = (dir: Direction | null) => {
+    if (!dir) return;
+
+    setState((prev) => {
+      if (prev.direction === dir && prev.nextDirection === dir) {
+        return { ...prev, direction: null, nextDirection: null };
+      }
+      return prev;
+    });
+  };
+
+  const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+
+    touchInfoRef.current = {
+      id: touch.identifier,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastDirection: null,
+    };
+  };
+
+  const handleTouchMove = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const info = touchInfoRef.current;
+    if (!info) return;
+
+    const activeTouch = Array.from(e.changedTouches).find(
+      (t) => t.identifier === info.id
+    );
+    if (!activeTouch) return;
+
+    const dx = activeTouch.clientX - info.startX;
+    const dy = activeTouch.clientY - info.startY;
+
+    if (
+      Math.abs(dx) < SWIPE_THRESHOLD_PX &&
+      Math.abs(dy) < SWIPE_THRESHOLD_PX
+    ) {
+      return;
+    }
+
+    const dir: Direction =
+      Math.abs(dx) > Math.abs(dy)
+        ? dx > 0
+          ? "right"
+          : "left"
+        : dy > 0
+        ? "down"
+        : "up";
+
+    if (dir && dir !== info.lastDirection) {
+      applyDirectionalInput(dir);
+      touchInfoRef.current = {
+        id: info.id,
+        startX: activeTouch.clientX,
+        startY: activeTouch.clientY,
+        lastDirection: dir,
+      };
+    } else if (dir && dir === info.lastDirection) {
+      touchInfoRef.current = {
+        ...info,
+        startX: activeTouch.clientX,
+        startY: activeTouch.clientY,
+      };
+    }
+
+  };
+
+  const handleTouchEnd = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const info = touchInfoRef.current;
+    if (!info) return;
+
+    const ended = Array.from(e.changedTouches).some(
+      (t) => t.identifier === info.id
+    );
+    if (!ended) return;
+
+    releaseDirectionalInput(info.lastDirection);
+    touchInfoRef.current = null;
+  };
+
+  const handleVirtualButton = (dir: Direction) => (
+    e?: { preventDefault?: () => void }
+  ) => {
+    e?.preventDefault?.();
+    if (!dir) return;
+    applyDirectionalInput(dir);
+  };
+
+  const handleToggleMute = () => {
+    setIsMuted((prev) => !prev);
+  };
 
   // =======================
   // Musique de fond par niveau
@@ -300,6 +427,7 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
     const audio = new Audio(`${base}sounds/${key}.wav`);
     audio.loop = true;
     audio.volume = 0.35;
+    audio.muted = isMuted;
     musicRef.current = audio;
 
     audio.play().catch(() => {});
@@ -307,7 +435,14 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
     return () => {
       audio.pause();
     };
-  }, [state.levelIndex]);
+  }, [state.levelIndex, isMuted]);
+
+  useEffect(() => {
+    setSoundMuted(isMuted);
+    if (musicRef.current) {
+      musicRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
 
   // =======================
   // Clavier (flèches + cheat 1–5)
@@ -627,10 +762,21 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
             {isFrightEnding ? "!)" : ""}
           </span>
         )}
+        <button
+          type="button"
+          className="sound-toggle"
+          onClick={handleToggleMute}
+        >
+          {isMuted ? "SON COUPÉ" : "SON ON"}
+        </button>
       </div>
 
       <div
         className="grid"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         style={{
           width: grid[0].length * TILE_SIZE,
           height: grid.length * TILE_SIZE,
@@ -716,6 +862,46 @@ export default function GameScreen({ onBackToMenu }: GameScreenProps) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="touch-controls" aria-label="Contrôles tactiles">
+        <div className="touch-placeholder" />
+        <button
+          type="button"
+          className="touch-btn"
+          aria-label="Monter"
+          onPointerDown={handleVirtualButton("up")}
+        >
+          UP
+        </button>
+        <div className="touch-placeholder" />
+        <button
+          type="button"
+          className="touch-btn"
+          aria-label="Aller à gauche"
+          onPointerDown={handleVirtualButton("left")}
+        >
+          LEFT
+        </button>
+        <div className="touch-placeholder" />
+        <button
+          type="button"
+          className="touch-btn"
+          aria-label="Aller à droite"
+          onPointerDown={handleVirtualButton("right")}
+        >
+          RIGHT
+        </button>
+        <div className="touch-placeholder" />
+        <button
+          type="button"
+          className="touch-btn"
+          aria-label="Descendre"
+          onPointerDown={handleVirtualButton("down")}
+        >
+          DOWN
+        </button>
+        <div className="touch-placeholder" />
       </div>
 
       <button onClick={onBackToMenu}>Retour au menu</button>

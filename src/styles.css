@@ -164,6 +164,8 @@
     font-size: 0.8rem;
     text-transform: uppercase;
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 1.5rem;
   }
 
@@ -174,6 +176,12 @@
 
   .game-lives {
     color: #ff7777;
+  }
+
+  .game-hud button.sound-toggle {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.9rem;
+    margin-top: 0;
   }
 
 /* Overlay victoire */
@@ -210,6 +218,41 @@
     position: relative;
     background: black;
     margin-bottom: 1.5rem;
+  touch-action: none;
+  user-select: none;
+  }
+
+  .touch-controls {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .touch-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 70px);
+      justify-items: center;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .touch-controls button.touch-btn {
+      font-family: 'Press Start 2P', monospace;
+      background: rgba(0, 0, 0, 0.65);
+      border: 2px solid #ffdd33;
+      border-radius: 12px;
+      color: #ffdd33;
+      padding: 0.75rem;
+      font-size: 1.25rem;
+      width: 70px;
+      height: 70px;
+      touch-action: manipulation;
+      margin: 0;
+    }
+
+    .touch-controls .touch-placeholder {
+      width: 70px;
+      height: 70px;
+    }
   }
   
   /* Chaque case */
