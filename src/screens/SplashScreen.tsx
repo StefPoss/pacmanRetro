@@ -31,7 +31,7 @@ export default function SplashScreen({ onContinue }: SplashScreenProps) {
 
         <p className="splash-version">{APP_VERSION}</p>
 
-        <p className="splash-credits">vibe coded by <span className="splash-author">CÔME POSSAMAI</span> &amp; <span className="splash-author">lepoSs</span></p>
+        <p className="splash-credits">vibe coded by <span className="splash-author">Lepacamaneur</span></p>
       </div>
     </div>
   );
