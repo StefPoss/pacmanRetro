@@ -16,7 +16,7 @@ export default function ReleaseNotesScreen({ onBack }: ReleaseNotesScreenProps) 
 
         <h2>v0.8.5 – Splash credit refresh</h2>
           <ul>
-            <li>Message d’accueil mis à jour : “vibe coded by Lepacamaneur”.</li>
+            <li>Message d’accueil mis à jour : “vibe coded by Lepacmaneur &amp; lepoSs”.</li>
           </ul>
 
         <h2>v0.8.4 – Touch & Sound update</h2>
